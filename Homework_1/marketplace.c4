@@ -1,0 +1,173 @@
+specification {
+    element person {
+        style {
+            shape person
+            color green
+        }
+    }
+    element softwareSystem
+    element container
+    element component
+    element database {
+        style {
+            shape cylinder
+        }
+    }
+}
+
+model {
+    buyer = person "Покупатель" "Пользователь, который покупает товары"
+    seller = person "Продавец" "Пользователь, который продает товары"
+    administrator = person "Администратор" "Пользователь, которым пользуются техподдержка и команда разработки"
+    paymentSystem = softwareSystem "Внешняя платежная система"
+    emailSystem = softwareSystem "Email сервис"
+    smsSystem = softwareSystem "Сервис рассылки SMS"
+
+    marketplace = softwareSystem "Маркетплейс" {
+        description "Платформа для продажи и покупки товаров"
+
+        apiGateway = container "API Gateway" {
+            description "Точка входа в систему, маршрутизация запросов"
+        }
+
+        authService = container "Auth Service" {
+            description "Аутентификация (вход по SMS-коду), авторизация"
+            technology "Microservice"
+        }
+
+        authDB = database "Auth Database" {
+            description "Хранит учетные данные и роли пользователей"
+            technology "PostgreSQL"
+        }
+
+        userService = container "User Service" {
+            description "Управление пользователями, профили покупателей и продавцов"
+            technology "Microservice"
+        }
+
+        productCatalogService = container "Product Catalog Service" {
+            description "Управление товарами, категориями, атрибутами"
+            technology "Microservice"
+        }
+
+        recommendationService = container "Recommendation Service" {
+            description "Персонализация ленты товаров на основе истории пользователя"
+            technology "Microservice"
+        }
+
+        cartService = container "Cart Service" {
+            description "Управление корзиной покупателя"
+            technology "Microservice"
+        }
+
+        orderService = container "Order Service" {
+            description "Создание и управление заказами"
+            technology "Microservice"
+        }
+
+        paymentService = container "Payment Service" {
+            description "Расчет стоимости, учет платежей"
+            technology "Microservice"
+        }
+
+        notificationService = container "Notification Service" {
+            description "Отправка уведомлений о статусах заказов"
+            technology "Microservice"
+        }
+
+        personalDataService = container "Personal Data Service" {
+            description "Обмен персональных данных пользователей на обезличенные идентификаторы"
+            technology "Microservice"
+        }
+
+        userDB = database "User Database" {
+            description "Хранит данные пользователей, профили"
+            technology "PostgreSQL"
+        }
+
+        cartDB = database "Cart Database" {
+            description "Хранит корзины пользователей"
+            technology "Cassandra"
+        }
+
+        productDB = database "Product Database" {
+            description "Хранит товары, и каталог"
+            technology "PostgreSQL"
+        }
+
+        orderDB = database "Order Database" {
+            description "Хранит заказы, позиции заказов, статусы"
+            technology "PostgreSQL"
+        }
+
+        paymentDB = database "Payment Database" {
+            description "Хранит транзакции, платежи, счета"
+            technology "PostgreSQL"
+        }
+
+        personalDataDB = database "Personal Data Database" {
+            description "Хранит персональные данные пользователей"
+            technology "PostgreSQL"
+        }
+
+        mediaStorage = container "Media Storage" {
+            description "Объектное хранилище для фотографий"
+            technology "S3"
+        }
+    }
+
+    buyer -> apiGateway "Просматривает товары, оформляет заказы" "HTTPS/REST"
+    seller -> apiGateway "Управляет товарами" "HTTPS/REST"
+    administrator -> apiGateway "Администрирование системы" "HTTPS/REST"
+
+    apiGateway -> authService "Аутентификация и авторизация" "gRPC/Sync"
+    apiGateway -> userService "Получение профиля" "gRPC/Sync"
+    apiGateway -> productCatalogService "CRUD товаров" "gRPC/Sync"
+    apiGateway -> recommendationService "Получение персонализированной ленты" "gRPC/Sync"
+    apiGateway -> cartService "Управление корзиной" "gRPC/Sync"
+    apiGateway -> orderService "Создание заказа" "gRPC/Sync"
+    apiGateway -> mediaStorage "Чтение фотографий товаров" "REST/Sync"
+
+    authService -> personalDataService "Хранение номеров пользователей" "gRPC/Sync"
+    authService -> authDB "Хранение и проверка учетных данных" "SQL"
+    authService -> smsSystem "Отправка кода для входа по SMS" "REST/HTTPS"
+
+    userService -> userDB "Чтение/запись данных пользователей" "SQL"
+    userService -> personalDataService "Сохранение персональных данных" "gRPC/Sync"
+
+    cartService -> cartDB "Управление корзиной" "CQL"
+    cartService -> productCatalogService "Проверка доступности товаров" "gRPC/Sync"
+
+    productCatalogService -> productDB "Управление товарами" "SQL"
+    productCatalogService -> mediaStorage "Запись фотографий товаров" "REST/Sync"
+
+    recommendationService -> productCatalogService "Получение данных о товарах" "gRPC/Sync"
+    recommendationService -> orderService "Получение истории заказов для персонализации" "gRPC/Sync"
+
+    orderService -> orderDB "Управление заказами" "SQL"
+    orderService -> cartService "Получение содержимого корзины" "gRPC/Sync"
+    orderService -> paymentService "Инициирование платежа" "gRPC/Sync"
+    orderService -> notificationService "Отправка уведомлений о заказах" "gRPC/Sync"
+
+    paymentService -> paymentDB "Учет платежей" "SQL"
+    paymentService -> paymentSystem "Обработка платежа" "REST/HTTPS"
+
+    notificationService -> emailSystem "Отправка email" "REST/HTTPS"
+    notificationService -> personalDataService "Получение Email и телефона пользователя" "gRPC/Sync"
+
+    personalDataService -> personalDataDB "Хранение персональных данных" "SQL"
+}
+
+views {
+    view full {
+        title "Все элементы"
+        include
+            buyer,
+            seller,
+            administrator,
+            paymentSystem,
+            emailSystem,
+            smsSystem,
+            marketplace.*
+    }
+}
