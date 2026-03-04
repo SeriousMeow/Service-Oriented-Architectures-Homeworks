@@ -1,0 +1,1083 @@
+openapi: 3.1.0
+info:
+  title: Products Service
+  version: 1.0.0
+  description: |
+    API for Products Service
+
+components:
+  schemas:
+    UserId:
+      type: integer
+
+    OrderItemId:
+      type: integer
+
+    PromoCodeId:
+      type: integer
+
+    Quantity:
+      type: integer
+      minimum: 1
+      maximum: 999
+
+    Amount:
+      type: string
+      pattern: '^\d+(\.\d{1,2})?$'
+      description: "Amount as decimal string with up to 2 decimal places (e.g., '123.45')"
+      example: "99.99"
+
+    Timestamp:
+      type: string
+      format: date-time
+
+    ProductId:
+      type: integer
+
+    ProductName:
+      type: string
+      minLength: 1
+      maxLength: 255
+
+    ProductDescription:
+      type: string
+      maxLength: 4000
+
+    ProductPrice:
+      type: string
+      pattern: '^\d+\.\d{2}$'
+      description: "Price as decimal string with exactly 2 decimal places (e.g., '99.99')"
+      example: "99.99"
+
+    ProductStock:
+      type: integer
+      minimum: 0
+
+    ProductStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
+        - ARCHIVED
+
+    ProductCategory:
+      type: string
+      minLength: 1
+      maxLength: 100
+
+    Product:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - price
+        - stock
+        - category
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          $ref: "#/components/schemas/ProductId"
+        name:
+          $ref: "#/components/schemas/ProductName"
+        description:
+          $ref: "#/components/schemas/ProductDescription"
+        price:
+          $ref: "#/components/schemas/ProductPrice"
+        stock:
+          $ref: "#/components/schemas/ProductStock"
+        category:
+          $ref: "#/components/schemas/ProductCategory"
+        status:
+          $ref: "#/components/schemas/ProductStatus"
+        created_at:
+          $ref: "#/components/schemas/Timestamp"
+        updated_at:
+          $ref: "#/components/schemas/Timestamp"
+
+    ProductCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - price
+        - stock
+        - category
+        - status
+      properties:
+        name:
+          $ref: "#/components/schemas/ProductName"
+        description:
+          $ref: "#/components/schemas/ProductDescription"
+        price:
+          $ref: "#/components/schemas/ProductPrice"
+        stock:
+          $ref: "#/components/schemas/ProductStock"
+        category:
+          $ref: "#/components/schemas/ProductCategory"
+        status:
+          $ref: "#/components/schemas/ProductStatus"
+
+    ProductUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          $ref: "#/components/schemas/ProductName"
+        description:
+          $ref: "#/components/schemas/ProductDescription"
+        price:
+          $ref: "#/components/schemas/ProductPrice"
+        stock:
+          $ref: "#/components/schemas/ProductStock"
+        category:
+          $ref: "#/components/schemas/ProductCategory"
+        status:
+          $ref: "#/components/schemas/ProductStatus"
+
+    ProductResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - price
+        - stock
+        - category
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          $ref: "#/components/schemas/ProductId"
+        name:
+          $ref: "#/components/schemas/ProductName"
+        description:
+          $ref: "#/components/schemas/ProductDescription"
+        price:
+          $ref: "#/components/schemas/ProductPrice"
+        stock:
+          $ref: "#/components/schemas/ProductStock"
+        category:
+          $ref: "#/components/schemas/ProductCategory"
+        status:
+          $ref: "#/components/schemas/ProductStatus"
+        created_at:
+          $ref: "#/components/schemas/Timestamp"
+        updated_at:
+          $ref: "#/components/schemas/Timestamp"
+
+    Page:
+      type: integer
+      minimum: 0
+      default: 0
+    PageSize:
+      type: integer
+      minimum: 1
+      default: 20
+
+    ProductsGetResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - products
+        - totalElements
+        - currentPage
+      properties:
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        totalElements:
+          type: integer
+          minimum: 0
+        currentPage:
+          type: object
+          additionalProperties: false
+          required:
+            - page
+            - size
+          properties:
+            page:
+              $ref: "#/components/schemas/Page"
+            size:
+              $ref: "#/components/schemas/PageSize"
+
+    ProductsPostRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - price
+        - stock
+        - category
+        - status
+      properties:
+        name:
+          $ref: "#/components/schemas/ProductName"
+        description:
+          $ref: "#/components/schemas/ProductDescription"
+        price:
+          $ref: "#/components/schemas/ProductPrice"
+        stock:
+          $ref: "#/components/schemas/ProductStock"
+        category:
+          $ref: "#/components/schemas/ProductCategory"
+        status:
+          $ref: "#/components/schemas/ProductStatus"
+
+
+    ProductsIdPutRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          $ref: "#/components/schemas/ProductName"
+        description:
+          $ref: "#/components/schemas/ProductDescription"
+        price:
+          $ref: "#/components/schemas/ProductPrice"
+        stock:
+          $ref: "#/components/schemas/ProductStock"
+        category:
+          $ref: "#/components/schemas/ProductCategory"
+        status:
+          $ref: "#/components/schemas/ProductStatus"
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error_code
+        - message
+      properties:
+        error_code:
+          type: string
+          enum:
+            - PRODUCT_NOT_FOUND
+            - PRODUCT_INACTIVE
+            - ORDER_NOT_FOUND
+            - ORDER_LIMIT_EXCEEDED
+            - ORDER_HAS_ACTIVE
+            - INVALID_STATE_TRANSITION
+            - INSUFFICIENT_STOCK
+            - PROMO_CODE_INVALID
+            - PROMO_CODE_MIN_AMOUNT
+            - ORDER_OWNERSHIP_VIOLATION
+            - VALIDATION_ERROR
+            - TOKEN_EXPIRED
+            - TOKEN_INVALID
+            - REFRESH_TOKEN_INVALID
+            - ACCESS_DENIED
+            - USER_ALREADY_EXISTS
+            - INVALID_CREDENTIALS
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    ValidationErrorDetails:
+      type: object
+      additionalProperties: false
+      properties:
+        field:
+          type: string
+        violation:
+          type: string
+
+    OrderId:
+      type: integer
+
+    OrderStatus:
+      type: string
+      enum:
+        - CREATED
+        - PAYMENT_PENDING
+        - PAID
+        - SHIPPED
+        - COMPLETED
+        - CANCELED
+
+    PromoCode:
+      type: string
+      pattern: "^[A-Z0-9_]{4,20}$"
+
+    DiscountType:
+      type: string
+      enum:
+        - PERCENTAGE
+        - FIXED_AMOUNT
+
+    OrderItem:
+      type: object
+      additionalProperties: false
+      required:
+        - product_id
+        - quantity
+      properties:
+        product_id:
+          $ref: "#/components/schemas/ProductId"
+        quantity:
+          $ref: "#/components/schemas/Quantity"
+
+    OrderItemResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - item
+        - price_at_order
+      properties:
+        id:
+          $ref: "#/components/schemas/OrderItemId"
+        item:
+          $ref: "#/components/schemas/OrderItem"
+        price_at_order:
+          $ref: "#/components/schemas/Amount"
+
+    OrderCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        promo_code:
+          $ref: "#/components/schemas/PromoCode"
+
+    OrderUpdateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/OrderItem"
+
+    OrderResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - user_id
+        - status
+        - total_amount
+        - discount_amount
+        - items
+        - created_at
+        - updated_at
+      properties:
+        id:
+          $ref: "#/components/schemas/OrderId"
+        user_id:
+          $ref: "#/components/schemas/UserId"
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        promo_code:
+          $ref: "#/components/schemas/PromoCode"
+        total_amount:
+          $ref: "#/components/schemas/Amount"
+        discount_amount:
+          $ref: "#/components/schemas/Amount"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItemResponse"
+        created_at:
+          $ref: "#/components/schemas/Timestamp"
+        updated_at:
+          $ref: "#/components/schemas/Timestamp"
+
+    PromoCodeObject:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - discount_type
+        - discount_value
+        - min_order_amount
+        - max_uses
+        - valid_from
+        - valid_until
+      properties:
+        id:
+          $ref: "#/components/schemas/PromoCodeId"
+        code:
+          $ref: "#/components/schemas/PromoCode"
+        discount_type:
+          $ref: "#/components/schemas/DiscountType"
+        discount_value:
+          $ref: "#/components/schemas/Amount"
+        min_order_amount:
+          $ref: "#/components/schemas/Amount"
+        max_uses:
+          type: integer
+          minimum: 1
+        current_uses:
+          type: integer
+        valid_from:
+          $ref: "#/components/schemas/Timestamp"
+        valid_until:
+          $ref: "#/components/schemas/Timestamp"
+        active:
+          type: boolean
+
+    PromoCodeResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - code
+        - discount_type
+        - discount_value
+        - min_order_amount
+        - max_uses
+        - current_uses
+        - valid_from
+        - valid_until
+        - active
+      properties:
+        id:
+          $ref: "#/components/schemas/PromoCodeId"
+        code:
+          $ref: "#/components/schemas/PromoCode"
+        discount_type:
+          $ref: "#/components/schemas/DiscountType"
+        discount_value:
+          $ref: "#/components/schemas/Amount"
+        min_order_amount:
+          $ref: "#/components/schemas/Amount"
+        max_uses:
+          type: integer
+        current_uses:
+          type: integer
+        valid_from:
+          $ref: "#/components/schemas/Timestamp"
+        valid_until:
+          $ref: "#/components/schemas/Timestamp"
+        active:
+          type: boolean
+
+    UserRole:
+      type: string
+      enum:
+        - USER
+        - SELLER
+        - ADMIN
+
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - password
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          minLength: 8
+          maxLength: 100
+        role:
+          $ref: "#/components/schemas/UserRole"
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - access_token
+        - refresh_token
+        - user_id
+        - role
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        user_id:
+          $ref: "#/components/schemas/UserId"
+        role:
+          $ref: "#/components/schemas/UserRole"
+
+    RefreshRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+
+paths:
+  /auth/register:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        201:
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        409:
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        200:
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/refresh:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        200:
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /products:
+    get:
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT Bearer token
+        - name: page
+          in: query
+          schema:
+            $ref: "#/components/schemas/Page"
+        - name: size
+          in: query
+          schema:
+            $ref: "#/components/schemas/PageSize"
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/ProductStatus"
+        - name: category
+          in: query
+          schema:
+            $ref: "#/components/schemas/ProductCategory"
+
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductsGetResponse"
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        
+    post:
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT Bearer token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductsPostRequest"
+
+      responses:
+        204:
+          description: Product created
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /products/{id}:
+    get:
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT Bearer token
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProductId"
+
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        404:
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT Bearer token
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProductId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductsIdPutRequest"
+
+      responses:
+        204:
+          description: OK
+        404:
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        403:
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT Bearer token
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/ProductId"
+
+      responses:
+        204:
+          description: OK
+        404:
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        403:
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orders:
+    post:
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT Bearer token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderCreateRequest"
+
+      responses:
+        201:
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        403:
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        404:
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        409:
+          description: Business rule violation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        422:
+          description: Promo code error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        429:
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orders/{id}:
+    get:
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT Bearer token
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/OrderId"
+
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        403:
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        404:
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT Bearer token
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/OrderId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderUpdateRequest"
+
+      responses:
+        200:
+          description: Order updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        403:
+          description: Ownership violation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        404:
+          description: Order or product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        409:
+          description: Business rule violation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        422:
+          description: Promo code error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        429:
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orders/{id}/cancel:
+    post:
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT Bearer token
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/OrderId"
+
+      responses:
+        200:
+          description: Order canceled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        403:
+          description: Ownership violation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        404:
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        409:
+          description: Invalid state transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /promo-codes:
+    post:
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+          required: true
+          description: JWT Bearer token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromoCodeObject"
+      responses:
+        201:
+          description: Promo code created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromoCodeResponse"
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        403:
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
