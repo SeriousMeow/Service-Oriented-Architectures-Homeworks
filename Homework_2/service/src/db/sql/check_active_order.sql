@@ -1,0 +1,4 @@
+SELECT id
+FROM orders
+WHERE user_id = $1 AND status IN ('CREATED', 'PAYMENT_PENDING')
+LIMIT 1
