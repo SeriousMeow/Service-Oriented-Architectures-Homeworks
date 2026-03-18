@@ -1,0 +1,161 @@
+services:
+  postgres_booking:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: booking
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_booking_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d booking"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres_flight:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: flight
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_flight_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d flight"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  flyway_booking:
+    image: flyway/flyway:12
+    command: migrate
+    volumes:
+      - ./migrations/booking:/flyway/sql
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres_booking:5432/booking
+      FLYWAY_USER: user
+      FLYWAY_PASSWORD: password
+      FLYWAY_CONNECT_RETRIES: 10
+    depends_on:
+      postgres_booking:
+        condition: service_healthy
+
+  flyway_flight:
+    image: flyway/flyway:12
+    command: migrate
+    volumes:
+      - ./migrations/flight:/flyway/sql
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres_flight:5432/flight
+      FLYWAY_USER: user
+      FLYWAY_PASSWORD: password
+      FLYWAY_CONNECT_RETRIES: 10
+    depends_on:
+      postgres_flight:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis_replica:
+    image: redis:7-alpine
+    command: ["redis-server", "--replicaof", "redis", "6379"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis_sentinel:
+    image: redis:7-alpine
+    ports:
+      - "26379:26379"
+    command:
+      [
+        "sh",
+        "-c",
+        "until redis-cli -h redis -p 6379 ping >/dev/null 2>&1; do echo 'waiting for redis'; sleep 1; done\ncat > /tmp/sentinel.conf <<'EOF'\nport 26379\nsentinel resolve-hostnames yes\nsentinel announce-hostnames yes\nsentinel monitor mymaster redis 6379 1\nsentinel down-after-milliseconds mymaster 5000\nsentinel failover-timeout mymaster 10000\nsentinel parallel-syncs mymaster 1\nEOF\nredis-server /tmp/sentinel.conf --sentinel",
+      ]
+    depends_on:
+      redis:
+        condition: service_healthy
+      redis_replica:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "26379", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  booking:
+    build:
+      context: .
+      dockerfile: ./services/booking/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      POSTGRES_HOST: postgres_booking
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: booking
+      FLIGHT_SERVICE_ADDR: flight:50051
+      FLIGHT_SERVICE_API_KEY: change-me
+    depends_on:
+      postgres_booking:
+        condition: service_healthy
+      flyway_booking:
+        condition: service_completed_successfully
+      flight:
+        condition: service_started
+
+  flight:
+    build:
+      context: .
+      dockerfile: ./services/flight/Dockerfile
+    ports:
+      - "50051:50051"
+    environment:
+      GRPC_PORT: 50051
+      POSTGRES_HOST: postgres_flight
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: flight
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_MODE: sentinel
+      REDIS_SENTINEL_MASTER_NAME: mymaster
+      REDIS_SENTINEL_NODES: redis_sentinel:26379
+      SERVICE_API_KEY: change-me
+    depends_on:
+      postgres_flight:
+        condition: service_healthy
+      flyway_flight:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      redis_replica:
+        condition: service_healthy
+      redis_sentinel:
+        condition: service_healthy
+
+volumes:
+  postgres_booking_data:
+  postgres_flight_data:

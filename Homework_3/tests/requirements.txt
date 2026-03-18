@@ -1,0 +1,7 @@
+grpcio
+grpcio-tools
+protobuf
+pytest
+requests
+psycopg[binary]
+redis

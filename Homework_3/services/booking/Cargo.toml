@@ -1,0 +1,30 @@
+[package]
+name = "booking-service"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs"
+
+[dependencies]
+postgres-types = "0.2"
+anyhow = "1"
+async-trait = "0.1"
+axum = "0.8"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+deadpool-postgres = "0.14"
+http = "1"
+oas3-gen-support = "0.25"
+prost = "0.13"
+prost-types = "0.13"
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-uuid-1"] }
+tonic = "0.12"
+uuid = { version = "1", features = ["v4", "serde"] }
+validator = { version = "0.20", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "std", "json"] }
+
+[build-dependencies]
+protoc-bin-vendored = "3"
+tonic-build = "0.12"

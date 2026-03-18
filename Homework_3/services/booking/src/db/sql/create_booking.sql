@@ -1,0 +1,34 @@
+INSERT INTO bookings (
+    id,
+    user_id,
+    flight_id,
+    passenger_name,
+    passenger_email,
+    seat_count,
+    price_currency,
+    total_price_minor,
+    status
+)
+VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6,
+    $7,
+    $8,
+    'CONFIRMED'
+)
+RETURNING
+    id,
+    user_id,
+    flight_id,
+    passenger_name,
+    passenger_email,
+    seat_count,
+    price_currency,
+    total_price_minor,
+    status,
+    created_at,
+    updated_at;
