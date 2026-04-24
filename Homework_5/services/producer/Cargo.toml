@@ -1,0 +1,22 @@
+[package]
+name = "movie-producer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+apache-avro = "0.17"
+axum = { version = "0.8", features = ["macros", "json"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+rand = "0.8"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rdkafka = { version = "0.36", features = ["cmake-build"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "time"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+uuid = { version = "1", features = ["v4", "serde"] }
