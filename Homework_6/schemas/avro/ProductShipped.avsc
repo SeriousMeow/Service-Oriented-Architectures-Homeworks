@@ -1,0 +1,34 @@
+{
+  "type": "record",
+  "name": "ProductShipped",
+  "namespace": "warehouse.events",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string"
+    },
+    {
+      "name": "event_type",
+      "type": "string"
+    },
+    {
+      "name": "event_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    },
+    {
+      "name": "product_id",
+      "type": "string"
+    },
+    {
+      "name": "zone_id",
+      "type": "string"
+    },
+    {
+      "name": "quantity",
+      "type": "int"
+    }
+  ]
+}
