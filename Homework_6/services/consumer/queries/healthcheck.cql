@@ -1,0 +1,2 @@
+SELECT now()
+FROM system.local

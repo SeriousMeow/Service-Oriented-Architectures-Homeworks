@@ -1,0 +1,38 @@
+{
+  "type": "record",
+  "name": "ProductMoved",
+  "namespace": "warehouse.events",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string"
+    },
+    {
+      "name": "event_type",
+      "type": "string"
+    },
+    {
+      "name": "event_timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    },
+    {
+      "name": "product_id",
+      "type": "string"
+    },
+    {
+      "name": "from_zone_id",
+      "type": "string"
+    },
+    {
+      "name": "to_zone_id",
+      "type": "string"
+    },
+    {
+      "name": "quantity",
+      "type": "int"
+    }
+  ]
+}

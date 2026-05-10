@@ -1,0 +1,263 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.5.5
+    hostname: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 5s
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.5
+    hostname: schema-registry
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:29092
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/subjects >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  kafka-init:
+    build:
+      context: .
+      dockerfile: infra/kafka/Dockerfile
+    environment:
+      KAFKA_BOOTSTRAP: kafka:29092
+      TOPIC_NAME: warehouse-events
+      DLQ_TOPIC_NAME: warehouse-events-dlq
+      PARTITIONS: 6
+      REPLICATION_FACTOR: 1
+      KAFKA_TOPIC_MIN_ISR: 1
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: "no"
+
+  cassandra-1:
+    image: cassandra:4.1
+    hostname: cassandra-1
+    ports:
+      - "9042:9042"
+    environment:
+      CASSANDRA_CLUSTER_NAME: warehouse-cluster
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_RACK: rack1
+      CASSANDRA_SEEDS: cassandra-1
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+    volumes:
+      - cassandra_1_data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh localhost 9042 -e 'DESCRIBE KEYSPACES' >/dev/null 2>&1"]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+
+  cassandra-2:
+    image: cassandra:4.1
+    hostname: cassandra-2
+    depends_on:
+      cassandra-1:
+        condition: service_healthy
+    environment:
+      CASSANDRA_CLUSTER_NAME: warehouse-cluster
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_RACK: rack1
+      CASSANDRA_SEEDS: cassandra-1
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+    volumes:
+      - cassandra_2_data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh localhost 9042 -e 'DESCRIBE KEYSPACES' >/dev/null 2>&1"]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+    restart: unless-stopped
+
+  cassandra-3:
+    image: cassandra:4.1
+    hostname: cassandra-3
+    depends_on:
+      cassandra-2:
+        condition: service_healthy
+    environment:
+      CASSANDRA_CLUSTER_NAME: warehouse-cluster
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_RACK: rack1
+      CASSANDRA_SEEDS: cassandra-1
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+    volumes:
+      - cassandra_3_data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh localhost 9042 -e 'DESCRIBE KEYSPACES' >/dev/null 2>&1"]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+    restart: unless-stopped
+
+  flyway-cassandra:
+    image: flyway/flyway:12
+    command:
+      - "-url=jdbc:cassandra://cassandra-1:9042?localdatacenter=datacenter1&requesttimeout=120000"
+      - -user=cassandra
+      - -password=cassandra
+      - -schemas=flyway_meta
+      - -defaultSchema=flyway_meta
+      - -sqlMigrationSuffixes=.cql
+      - -locations=filesystem:/flyway/sql
+      - migrate
+    volumes:
+      - ./infra/cassandra/migrations:/flyway/sql:ro
+    depends_on:
+      cassandra-1:
+        condition: service_healthy
+      cassandra-2:
+        condition: service_healthy
+      cassandra-3:
+        condition: service_healthy
+    restart: "no"
+
+  prometheus:
+    image: prom/prometheus:v2.53.4
+    hostname: prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    hostname: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/api/health | grep -q '\"database\":\"ok\"'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  warehouse-producer:
+    build:
+      context: .
+      dockerfile: services/producer/Dockerfile
+    hostname: warehouse-producer
+    ports:
+      - "18080:8080"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      WAREHOUSE_EVENTS_TOPIC: warehouse-events
+      PRODUCER_PORT: "8080"
+      PRODUCER_MODE: both
+      GENERATOR_INTERVAL_MS: 700
+      LOAD_DEFAULT_COUNT: 50
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health | grep -q ok"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 5s
+
+  warehouse-consumer:
+    build:
+      context: .
+      dockerfile: services/consumer/Dockerfile
+    hostname: warehouse-consumer
+    ports:
+      - "13000:3000"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      WAREHOUSE_EVENTS_TOPIC: warehouse-events
+      WAREHOUSE_EVENTS_DLQ_TOPIC: warehouse-events-dlq
+      WAREHOUSE_CONSUMER_GROUP: warehouse-state-consumer
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CASSANDRA_CONTACT_POINTS: cassandra-1:9042,cassandra-2:9042,cassandra-3:9042
+      CASSANDRA_READ_CONSISTENCY: ONE
+      CONSUMER_PORT: "3000"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      cassandra-1:
+        condition: service_healthy
+      cassandra-2:
+        condition: service_healthy
+      cassandra-3:
+        condition: service_healthy
+      flyway-cassandra:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/health | grep -q ok"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 5s
+
+volumes:
+  kafka_data:
+  cassandra_1_data:
+  cassandra_2_data:
+  cassandra_3_data:
+  prometheus_data:
+  grafana_data:
